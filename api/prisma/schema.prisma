@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+/// ===========================
+/// 🎓 OKUL MODELİ
+/// ===========================
+model School {
+  id           Int            @id(map: "PK_School") @default(autoincrement())
+  name         String         @db.NVarChar(255)
+  managerId    Int?           @unique(map: "UQ_School_managerId")
+  manager      User?           @relation("ManagerSchool", fields: [managerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_School_Manager")
+  students     Student[]
+  teachers     Teacher[]
+  chatChannels ChatChannel[]
+  reports      Report[]
+  studentReports StudentReport[]
+  teacherClasses TeacherClass[]
+
+  @@index([managerId], map: "IX_School_managerId")
+}
+
+/// ===========================
+/// 👩‍🎓 ÖĞRENCİ MODELİ
+/// ===========================
+model Student {
+  id        Int      @id(map: "PK_Student") @default(autoincrement())
+  name      String   @db.NVarChar(255)
+  grade     String   @db.NVarChar(100)
+  parentId  Int?
+  schoolId  Int
+  createdAt DateTime @default(dbgenerated("sysdatetime()"), map: "DF_Student_createdAt")
+  userId    Int?     @unique(map: "UQ_Student_userId")
+  parent    Parent?  @relation(fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Student_Parent")
+  school    School   @relation(fields: [schoolId], references: [id], onUpdate: NoAction, map: "FK_Student_School")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Student_User")
+  studentReports StudentReport[]
+
+  @@index([parentId], map: "IX_Student_parentId")
+  @@index([schoolId], map: "IX_Student_schoolId")
+  @@index([userId], map: "IX_Student_userId")
+}
+
+/// ===========================
+/// 👩‍🏫 ÖĞRETMEN MODELİ
+/// ===========================
+model Teacher {
+  id        Int            @id(map: "PK_Teacher") @default(autoincrement())
+  name      String         @db.NVarChar(255)
+  subject   String         @db.NVarChar(255)
+  className String?        @db.NVarChar(100) // Eski alan (geriye dönük uyumluluk için)
+  schoolId  Int
+  userId    Int?           @unique(map: "UQ_Teacher_userId")
+  school    School         @relation(fields: [schoolId], references: [id], onUpdate: NoAction, map: "FK_Teacher_School")
+  user      User?           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Teacher_User")
+  reports   Report[]
+  classes   TeacherClass[]
+
+  @@index([schoolId], map: "IX_Teacher_schoolId")
+  @@index([userId], map: "IX_Teacher_userId")
+}
+
+/// ===========================
+/// 🎓 ÖĞRETMEN-SINIF İLİŞKİSİ (Many-to-Many)
+/// ===========================
+model TeacherClass {
+  id        Int      @id(map: "PK_TeacherClass") @default(autoincrement())
+  teacherId Int
+  className String   @db.NVarChar(100)
+  schoolId  Int
+  createdAt DateTime @default(dbgenerated("sysdatetime()"), map: "DF_TeacherClass_createdAt")
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_TeacherClass_Teacher")
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_TeacherClass_School")
+
+  @@unique([teacherId, className, schoolId], map: "UQ_TeacherClass_teacher_class_school")
+  @@index([teacherId], map: "IX_TeacherClass_teacherId")
+  @@index([schoolId], map: "IX_TeacherClass_schoolId")
+  @@index([className], map: "IX_TeacherClass_className")
+  @@map("TeacherClass")
+}
+
+/// ===========================
+/// 👨‍👩‍👧 VELİ MODELİ
+/// ===========================
+model Parent {
+  id       Int       @id(map: "PK_Parent") @default(autoincrement())
+  name     String    @db.NVarChar(255)
+  phone    String?   @db.NVarChar(50)
+  email    String?   @db.NVarChar(320)
+  userId   Int?      @unique(map: "UQ_Parent_userId")
+  user     User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Parent_User")
+  students Student[]
+
+  @@index([userId], map: "IX_Parent_userId")
+}
+
+/// ===========================
+/// 👤 KULLANICI MODELİ
+/// ===========================
+model User {
+  id            Int         @id(map: "PK_User") @default(autoincrement())
+  name          String      @db.NVarChar(255)
+  email         String      @unique(map: "UQ_User_email") @db.NVarChar(320)
+  password      String      @db.NVarChar(255)
+  role          String      @default("N'student'", map: "DF_User_role") @db.NVarChar(50)
+  createdAt     DateTime    @default(dbgenerated("sysdatetime()"), map: "DF_User_createdAt")
+  refreshToken  String?     @db.NVarChar(Max)
+  parent        Parent?
+  managedSchool School?     @relation("ManagerSchool")
+  student       Student?
+  teacher       Teacher?
+  messages      Message[]
+  createdStudentReports StudentReport[]
+
+  @@map("User")
+}
+
+/// ===========================
+/// 💬 SOHBET KANALI MODELİ
+/// ===========================
+model ChatChannel {
+  id        Int       @id(map: "PK_ChatChannel") @default(autoincrement())
+  name      String    @db.NVarChar(255)
+  type      String    @db.NVarChar(50) // "teachers", "teachers_manager", "class"
+  schoolId  Int?
+  className String?   @db.NVarChar(100) // Sınıf kanalı için
+  createdAt DateTime  @default(dbgenerated("sysdatetime()"), map: "DF_ChatChannel_createdAt")
+  school    School?   @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ChatChannel_School")
+  messages  Message[]
+
+  @@index([schoolId], map: "IX_ChatChannel_schoolId")
+  @@index([type], map: "IX_ChatChannel_type")
+  @@map("ChatChannel")
+}
+
+/// ===========================
+/// 📨 MESAJ MODELİ
+/// ===========================
+model Message {
+  id        Int         @id(map: "PK_Message") @default(autoincrement())
+  content   String      @db.NVarChar(Max)
+  channelId Int
+  userId    Int
+  createdAt DateTime    @default(dbgenerated("sysdatetime()"), map: "DF_Message_createdAt")
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Message_ChatChannel")
+  user      User        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Message_User")
+
+  @@index([channelId], map: "IX_Message_channelId")
+  @@index([userId], map: "IX_Message_userId")
+  @@index([createdAt], map: "IX_Message_createdAt")
+  @@map("Message")
+}
+
+/// ===========================
+/// 📊 RAPOR MODELİ
+/// ===========================
+model Report {
+  id          Int       @id(map: "PK_Report") @default(autoincrement())
+  title       String    @db.NVarChar(255)
+  content     String    @db.NVarChar(Max)
+  className   String?   @db.NVarChar(100)
+  schoolId    Int
+  teacherId   Int
+  createdAt   DateTime  @default(dbgenerated("sysdatetime()"), map: "DF_Report_createdAt")
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Report_School")
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Report_Teacher")
+
+  @@index([schoolId], map: "IX_Report_schoolId")
+  @@index([teacherId], map: "IX_Report_teacherId")
+  @@index([className], map: "IX_Report_className")
+  @@index([createdAt], map: "IX_Report_createdAt")
+  @@map("Report")
+}
+
+
+/// ===========================
+/// 📝 ÖĞRENCİ RAPORU MODELİ
+/// ===========================
+model StudentReport {
+  id              Int      @id(map: "PK_StudentReport") @default(autoincrement())
+  title           String   @db.NVarChar(255)
+  content         String   @db.NVarChar(Max)
+  studentId       Int
+  schoolId        Int
+  createdByUserId Int
+  createdAt       DateTime @default(dbgenerated("sysdatetime()"), map: "DF_StudentReport_createdAt")
+
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_StudentReport_Student")
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_StudentReport_School")
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_StudentReport_User")
+
+  @@index([studentId], map: "IX_StudentReport_studentId")
+  @@index([schoolId], map: "IX_StudentReport_schoolId")
+  @@index([createdByUserId], map: "IX_StudentReport_createdByUserId")
+  @@index([createdAt], map: "IX_StudentReport_createdAt")
+  @@map("StudentReport")
+}
+
+model sysdiagrams {
+  name         String @db.NVarChar(128)
+  principal_id Int
+  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B6126DAB7CA") @default(autoincrement())
+  version      Int?
+  definition   Bytes?
+
+  @@unique([principal_id, name], map: "UK_principal_name")
+}
