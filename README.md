@@ -23,17 +23,7 @@ Okullar bu sistemi lisanslayarak kendi öğrenci topluluklarını yönetebilir.
 | **Auth & Hosting** | JWT + GitHub + Render |
 | **Repo Yönetimi** | Git + GitHub |
 
----
 
-## 🗓 Yol Haritası
-- [x] 1️⃣ Proje yapısı ve Git kurulumu  
-- [ ] 2️⃣ PostgreSQL & Prisma kurulumu  
-- [ ] 3️⃣ Kullanıcı modelleri (öğrenci, veli, öğretmen, okul)  
-- [ ] 4️⃣ API entegrasyonu  
-- [ ] 5️⃣ Web arayüzü ve kullanıcı giriş ekranı  
-- [ ] 6️⃣ Veli paneli ve okul modülü  
-- [ ] 7️⃣ Lisanslama sistemi  
 
----
 
 
