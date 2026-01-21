@@ -6,14 +6,6 @@
 
 ---
 
-## 🎯 Amaç
-Smart Nexus, bireysel öğrenme süreçlerini görünür hale getirir.  
-Her öğrenci kendi ilerlemesini takip ederken, öğretmen ve veliler öğrencinin gelişimini  
-gerçek zamanlı olarak analiz edebilir.  
-Okullar bu sistemi lisanslayarak kendi öğrenci topluluklarını yönetebilir.
-
----
-
 ## 🧱 Teknolojiler
 | Katman | Teknoloji |
 |--------|------------|
